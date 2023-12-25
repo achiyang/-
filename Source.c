@@ -28,15 +28,15 @@ void CursorView(BOOL visible) {
 
 void drawTitle() {
 	GotoXY(0, 3);
-	printf("          @@   @@  @@@  @   @  @@@@@     @@@@   @     @  @@@@@  @@@@@  @@@@   @@@@@  @@@@           ");
+	printf("           @@   @@  @@@  @   @  @@@@@   @@@@   @     @  @@@@@  @@@@@  @@@@   @@@@@  @@@@            ");
 	GotoXY(0, 4);
-	printf("          @ @ @ @   @   @@  @  @        @       @     @  @      @      @   @  @      @   @          ");
+	printf("           @ @ @ @   @   @@  @  @      @       @     @  @      @      @   @  @      @   @           ");
 	GotoXY(0, 5);
-	printf("          @  @  @   @   @ @ @  @@@@@     @@@@   @  @  @  @@@@@  @@@@@  @@@@   @@@@@  @@@@           ");
+	printf("           @  @  @   @   @ @ @  @@@@@   @@@@   @  @  @  @@@@@  @@@@@  @@@@   @@@@@  @@@@            ");
 	GotoXY(0, 6);
-	printf("          @     @   @   @  @@  @             @  @ @ @ @  @      @      @      @      @  @           ");
+	printf("           @     @   @   @  @@  @           @  @ @ @ @  @      @      @      @      @  @            ");
 	GotoXY(0, 7);
-	printf("          @     @  @@@  @   @  @@@@@     @@@@    @   @   @@@@@  @@@@@  @      @@@@@  @   @          ");
+	printf("           @     @  @@@  @   @  @@@@@   @@@@    @   @   @@@@@  @@@@@  @      @@@@@  @   @           ");
 }
 
 enum menu {
@@ -57,8 +57,8 @@ enum menu mainMenu() {
 	printf("Start Game");
 	GotoXY(47, 20);
 	printf("End Game");
-	GotoXY(44, 17);
-	printf("#");
+	GotoXY(43, 17);
+	printf("ขั");
 
 	while (1) {
 		int key = _getch();
@@ -73,10 +73,10 @@ enum menu mainMenu() {
 		}
 		else if (key == 'w' || key == 72 || key == 's' || key == 80) {
 			select = 1 - select;
-			GotoXY(44, 20 - select * 3);
-			printf(" ");
-			GotoXY(44, 17 + select * 3);
-			printf("#");
+			GotoXY(43, 20 - select * 3);
+			printf("  ");
+			GotoXY(43, 17 + select * 3);
+			printf("ขั");
 		}
 	}
 }
@@ -133,7 +133,7 @@ enum {
 	CUSTOM
 };
 
-int difficulty_cursor_X[4] = { 41, 39, 40, 45 };
+int difficulty_cursor_X[4] = { 40, 38, 39, 44 };
 
 struct Difficulty difficultySetting() {
 	system("cls");
@@ -151,8 +151,8 @@ struct Difficulty difficultySetting() {
 	printf("Hard(30 x 16, 99)");
 	GotoXY(47, 24);
 	printf("Custom");
-	GotoXY(41, 18);
-	printf("#");
+	GotoXY(40, 18);
+	printf("ขั");
 
 	while (1) {
 		int key = _getch();
@@ -169,17 +169,17 @@ struct Difficulty difficultySetting() {
 		}
 		else if (key == 'w' || key == 72) {
 			GotoXY(difficulty_cursor_X[difficulty], 18 + difficulty * 2);
-			printf(" ");
+			printf("  ");
 			if (--difficulty < 0) difficulty += 4;
 			GotoXY(difficulty_cursor_X[difficulty], 18 + difficulty * 2);
-			printf("#");
+			printf("ขั");
 		}
 		else if (key == 's' || key == 80) {
 			GotoXY(difficulty_cursor_X[difficulty], 18 + difficulty * 2);
-			printf(" ");
+			printf("  ");
 			if (++difficulty > 3) difficulty -= 4;
 			GotoXY(difficulty_cursor_X[difficulty], 18 + difficulty * 2);
-			printf("#");
+			printf("ขั");
 		}
 	}
 }
@@ -204,7 +204,7 @@ void setBoard(int numMine, Cell** board, COORD boardSize) {
 		do {
 			pos = rand() % max;
 		} while (board[pos / boardSize.X][pos % boardSize.X].isMine);
-		board[pos / boardSize.X][pos % boardSize.X].isMine = TRUE;
+		board[pos / boardSize.Y][pos % boardSize.Y].isMine = TRUE;
 	}
 
 	for (int i = 0; i < boardSize.X; i++) {
