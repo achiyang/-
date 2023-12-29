@@ -5,6 +5,32 @@
 #include <Windows.h>
 #include <time.h>
 
+enum {
+	UP,
+	DOWN,
+	LEFT,
+	RIGHT,
+	FLAG,
+	ENTER,
+	ESCAPE
+};
+
+char defaultControls[7] = {'w', 's', 'a', 'd', 'e', ' ', 'q'};
+char currentControls[7] = {'w', 's', 'a', 'd', 'e', ' ', 'q'};
+
+BOOL isCharInArray(char target, char array[], int size) {
+	for (int i = 0; i < size; i++) {
+		if (array[i] == target) {
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+BOOL isControls(int C) {
+	return isCharInArray(C, currentControls, sizeof(currentControls));
+}
+
 void GotoXY(int x, int y) {
 	COORD pos;
 	pos.X = x;
@@ -16,7 +42,6 @@ void SetConsoleWindow(int cols, int lines) {
 	char command[40] = { 0 };
 	sprintf(command, "mode con:cols=%d lines=%d", cols, lines);
 	system(command);
-	system("title Mine Sweeper");
 }
 
 void CursorView(BOOL visible) {
@@ -26,429 +51,594 @@ void CursorView(BOOL visible) {
 	SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &cci);
 }
 
+void textColor(int colorNum) {
+	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), colorNum);
+}
+
+int getkey() {
+	int key = _getch();
+	if (isupper(key)) {
+		key = tolower(key);
+	}
+	else if (key == 224 || key == 0) {
+		key = _getch();
+	}
+	return key;
+}
+
+int getcontrols() {
+	int key;
+	do {
+		key = getkey();
+	} while (key != 27 && !isControls(key));
+	return key;
+}
+
 void drawTitle() {
-	GotoXY(0, 3);
-	printf("           @@   @@  @@@  @   @  @@@@@   @@@@   @     @  @@@@@  @@@@@  @@@@   @@@@@  @@@@            ");
+	textColor(14);
 	GotoXY(0, 4);
-	printf("           @ @ @ @   @   @@  @  @      @       @     @  @      @      @   @  @      @   @           ");
+	printf("           @@   @@  @@@  @   @  @@@@@   @@@@   @     @  @@@@@  @@@@@  @@@@   @@@@@  @@@@            ");
 	GotoXY(0, 5);
-	printf("           @  @  @   @   @ @ @  @@@@@   @@@@   @  @  @  @@@@@  @@@@@  @@@@   @@@@@  @@@@            ");
+	printf("           @ @ @ @   @   @@  @  @      @       @     @  @      @      @   @  @      @   @           ");
 	GotoXY(0, 6);
-	printf("           @     @   @   @  @@  @           @  @ @ @ @  @      @      @      @      @  @            ");
+	printf("           @  @  @   @   @ @ @  @@@@@   @@@@   @  @  @  @@@@@  @@@@@  @@@@   @@@@@  @@@@            ");
 	GotoXY(0, 7);
+	printf("           @     @   @   @  @@  @           @  @ @ @ @  @      @      @      @      @  @            ");
+	GotoXY(0, 8);
 	printf("           @     @  @@@  @   @  @@@@@   @@@@    @   @   @@@@@  @@@@@  @      @@@@@  @   @           ");
 }
 
-enum menu {
-	START_GAME,
-	END_GAME
-};
+typedef struct ConsoleBuffer {
+	CHAR_INFO* buffer;
+	COORD bufferSize;
+} ConsoleBuffer;
 
-enum menu mainMenu() {
-	CursorView(FALSE);
-	SetConsoleWindow(100, 30);
-	system("cls");
+ConsoleBuffer saveConsoleBuffer(COORD bufferSize) {
+	CHAR_INFO* buffer = (CHAR_INFO*)malloc(sizeof(CHAR_INFO) * bufferSize.X * bufferSize.Y);
+	if (buffer == NULL) {
+		fprintf(stderr, "Memory allocation failed\n");
+		exit(EXIT_FAILURE);
+	}
 
-	drawTitle();
+	COORD bufferCoord = { 0, 0 };
+	SMALL_RECT readRegion = { 0, 0, bufferSize.X - 1, bufferSize.Y - 1 };
 
-	enum menu select = START_GAME;
+	HANDLE console = GetStdHandle(STD_OUTPUT_HANDLE);
 
-	GotoXY(47, 17);
-	printf("Start Game");
-	GotoXY(47, 20);
-	printf("End Game");
-	GotoXY(43, 17);
-	printf("☞");
+	ReadConsoleOutput(console, buffer, bufferSize, bufferCoord, &readRegion);
 
-	while (1) {
-		int key = _getch();
-		if (isupper(key)) key = tolower(key);
-		if (key == 224) key = _getch();
+	ConsoleBuffer consoleBuffer = { buffer, bufferSize };
+	return consoleBuffer;
+}
 
-		if (key == '\n' || key == ' ' || key == 13) {
-			return select;
-		}
-		else if (key == 27 || key == 3) {
-			return END_GAME;
-		}
-		else if (key == 'w' || key == 72 || key == 's' || key == 80) {
-			select = 1 - select;
-			GotoXY(43, 20 - select * 3);
-			printf("  ");
-			GotoXY(43, 17 + select * 3);
-			printf("☞");
-		}
+void restoreConsoleBuffer(ConsoleBuffer consoleBuffer) {
+	if (consoleBuffer.buffer == NULL) {
+		return;
+	}
+	SetConsoleWindow(consoleBuffer.bufferSize.X, consoleBuffer.bufferSize.Y);
+
+	COORD bufferCoord = { 0, 0 };
+	SMALL_RECT writeRegion = { 0, 0, consoleBuffer.bufferSize.X - 1, consoleBuffer.bufferSize.Y - 1 };
+
+	HANDLE console = GetStdHandle(STD_OUTPUT_HANDLE);
+
+	WriteConsoleOutput(console, consoleBuffer.buffer, consoleBuffer.bufferSize, bufferCoord, &writeRegion);
+}
+
+void freeConsoleBuffer(ConsoleBuffer* consoleBuffer) {
+	if (consoleBuffer->buffer == NULL) {
+		return;
+	}
+	free(consoleBuffer->buffer);
+	consoleBuffer->buffer = NULL;
+}
+
+void printSpecial(char c) {
+	if (isdigit(c)) {
+		printf("%c%c", -93, -80 + c - '0');
+	}
+	else if (islower(c)) {
+		printf("%c%c", -93, -63 + c - 'a');
+	}
+	else if (c == 80) {
+		printf("%c%c", -95, -23);
+	}
+	else if (c == 72) {
+		printf("%c%c", -95, -24);
+	}
+	else if (c == 75) {
+		printf("%c%c", -95, -25);
+	}
+	else if (c == 77) {
+		printf("%c%c", -95, -26);
+	}
+	else if (c == '!') {
+		printf("！");
+	}
+	else if (c == '?') {
+		printf("？");
+	}
+	else if (c == ',') {
+		printf("，");
+	}
+	else if (c == '.') {
+		printf("．");
+	}
+	else if (c == ':') {
+		printf("：");
+	}
+	else if (c == ';') {
+		printf("；");
+	}
+	else if (c == '\'') {
+		printf("＇");
+	}
+	else if (c == '\"') {
+		printf("＂");
+	}
+	else if (c == '(') {
+		printf("（");
+	}
+	else if (c == ')') {
+		printf("）");
+	}
+	else if (c == '[') {
+		printf("［");
+	}
+	else if (c == ']') {
+		printf("］");
+	}
+	else if (c == '{') {
+		printf("｛");
+	}
+	else if (c == '}') {
+		printf("｝");
+	}
+	else if (c == '<') {
+		printf("〈");
+	}
+	else if (c == '>') {
+		printf("〉");
+	}
+	else if (c == '+') {
+		printf("＋");
+	}
+	else if (c == '-') {
+		printf("－");
+	}
+	else if (c == '=') {
+		printf("＝");
+	}
+	else if (c == '$') {
+		printf("＄");
+	}
+	else if (c == '%') {
+		printf("％");
+	}
+	else if (c == '#') {
+		printf("＃");
+	}
+	else if (c == '&') {
+		printf("＆");
+	}
+	else if (c == '*') {
+		printf("＊");
+	}
+	else if (c == '@') {
+		printf("＠");
+	}
+	else if (c == '^') {
+		printf("＾");
+	}
+	else if (c == '|') {
+		printf("｜");
+	}
+	else if (c >= 1 && c <= 26) {
+		printf("^%c", c + 'A' - 1);
+	}
+	else if (c == 32) {
+		printf("ˇ");
+	}
+	else {
+		printf("%c ", c);
 	}
 }
 
-struct Difficulty {
-	COORD boardSize;
-	int numberMines;
-};
+void drawSquareBox(COORD pos) {
+	GotoXY(pos.X, pos.Y);
+	printf("┌───┐ ");
+	GotoXY(pos.X, pos.Y + 1);
+	printf("│ ");
+	GotoXY(pos.X + 4, pos.Y + 1);
+	printf("│ ");
+	GotoXY(pos.X, pos.Y + 2);
+	printf("└───┘ ");
+}
 
-struct Difficulty difficultyList[3] = {
-	{{9, 9}, 10},
-	{{16, 16}, 40},
-	{{30, 16}, 99}
-};
-
-struct Difficulty customDifficulty() {
-	CursorView(TRUE);
-
-	struct Difficulty difficulty;
-
-	while (1) {
-		system("cls");
-		drawTitle();
-		GotoXY(41, 13);
-		printf("Custom Difficulty");
-		GotoXY(39, 16);
-		printf("(board size >= 9 x 9)");
-		GotoXY(38, 20);
-		printf("Board cols:");
-		GotoXY(37, 22);
-		printf("Board lines:");
-		GotoXY(36, 24);
-		printf("Number mines:");
-
-		GotoXY(50, 20);
-		scanf("%hd", &difficulty.boardSize.X);
-		GotoXY(50, 22);
-		scanf("%hd", &difficulty.boardSize.Y);
-		GotoXY(50, 24);
-		scanf("%d", &difficulty.numberMines);
-
-		if (difficulty.boardSize.X >= 10 &&
-			difficulty.boardSize.Y >= 10 &&
-			difficulty.numberMines < difficulty.boardSize.X * difficulty.boardSize.Y) break;
+int quitOptions() {
+	textColor(15);
+	GotoXY(29, 12);
+	printf("┌───────────────────────────────────────┐ ");
+	for (int i = 0; i < 9; i++) {
+		GotoXY(29, 13 + i);
+		printf("│                                       │ ");
 	}
+	GotoXY(29, 22);
+	printf("└───────────────────────────────────────┘ ");
+	GotoXY(42, 15);
+	printf("Quit with saving?");
 
-	return difficulty;
+	int selection = 0;
+	while (1) {
+		textColor(15);
+		GotoXY(41, 19);
+		printf("Yes    No    Cancle");
+		textColor(11);
+		switch (selection) {
+		case 0:
+			GotoXY(41, 19);
+			printf("Yes");
+			break;
+
+		case 1:
+			GotoXY(48, 19);
+			printf("No");
+			break;
+
+		case 2:
+			GotoXY(54, 19);
+			printf("Cancle");
+			break;
+		}
+
+		int key = getkey();
+		if (key == 'y') {
+			if (selection == 0) {
+				return 0;
+			}
+			else {
+				selection = 0;
+			}
+		}
+		else if (key == 'n') {
+			if (selection == 1) {
+				return 1;
+			}
+			else {
+				selection = 1;
+			}
+		}
+		else if (key == 'c') {
+			if (selection == 2) {
+				return 2;
+			}
+			else {
+				selection = 2;
+			}
+		}
+		else if (key == currentControls[ENTER]) {
+			break;
+		}
+		else if (key == currentControls[ESCAPE] || key == 27) {
+			if (selection == 2) {
+				break;
+			}
+			else {
+				selection = 2;
+			}
+		}
+		else if (key == currentControls[LEFT] && selection > 0) {
+			selection--;
+		}
+		else if (key == currentControls[RIGHT] && selection < 2) {
+			selection++;
+		}
+	}
+	return selection;
 }
 
 enum {
-	EASY,
-	NORMAL,
-	HARD,
-	CUSTOM
+	RESET = 7,
+	QUIT = 8
 };
 
-int difficulty_cursor_X[4] = { 40, 38, 39, 44 };
+void optionsMenu() {
+	CursorView(FALSE);
+	GotoXY(0, 9);
+	for (int i = 0; i < 100 * 21; i++) {
+		_putch(' ');
+	}
 
-struct Difficulty difficultySetting() {
+	char tempControls[7];
+	memcpy(tempControls, currentControls, sizeof(currentControls));
+
+	COORD posArray[9] = {
+		{ 25, 16 },
+		{ 25, 19 },
+		{ 19, 19 },
+		{ 31, 19 },
+		{ 53, 18 },
+		{ 64, 18 },
+		{ 75, 18 },
+		{ 44, 26 },
+		{ 52, 26 }
+	};
+
+	textColor(15);
+	GotoXY(posArray[UP].X - 1, posArray[UP].Y - 2);
+	printf("CONTROLS");
+
+	GotoXY(posArray[FLAG].X + 1, posArray[FLAG].Y - 2);
+	printf("FLAG");
+
+	GotoXY(posArray[ENTER].X - 2, posArray[ENTER].Y - 2);
+	printf("ENTER/OPEN");
+
+	GotoXY(posArray[ESCAPE].X, posArray[ESCAPE].Y - 2);
+	printf("ESCAPE");
+
+	GotoXY(posArray[RESET].X, posArray[RESET].Y);
+	printf("RESET");
+
+	GotoXY(posArray[QUIT].X, posArray[QUIT].Y);
+	printf("QUIT");
+
+	GotoXY((posArray[RESET].X + 5 + posArray[QUIT].X) / 2, posArray[RESET].Y);
+	printf("/");
+
+	for (int i = 0; i < 7; i++) {
+		GotoXY(posArray[i].X + 2, posArray[i].Y + 1);
+		printSpecial(tempControls[i]);
+	}
+
+	textColor(11);
+	drawSquareBox(posArray[UP]);
+	textColor(15);
+	for (int i = 1; i < 7; i++) {
+		drawSquareBox(posArray[i]);
+	}
+
+	int current = UP;
+
+	while (1) {
+		int temp = current;
+		int key = getcontrols();
+
+		if (key == currentControls[ENTER]) {
+			if (current == QUIT) {
+				COORD consoleSize = { 100, 30 };
+				ConsoleBuffer tempBuffer = saveConsoleBuffer(consoleSize);
+
+				int selection = quitOptions();
+				if (selection == 2) {
+					restoreConsoleBuffer(tempBuffer);
+					freeConsoleBuffer(&tempBuffer);
+				}
+				else {
+					freeConsoleBuffer(&tempBuffer);
+					if (selection == 0) {
+						memcpy(currentControls, tempControls, sizeof(tempControls));
+					}
+					break;
+				}
+			}
+			else if (current == RESET) {
+				memcpy(tempControls, defaultControls, sizeof(defaultControls));
+				for (int i = 0; i < 7; i++) {
+					GotoXY(posArray[i].X + 2, posArray[i].Y + 1);
+					printSpecial(tempControls[i]);
+				}
+			}
+			else {
+				textColor(4);
+				drawSquareBox(posArray[current]);
+
+				int key;
+				do {
+					key = getkey();
+				} while (key != 27 && key != tempControls[current] && isCharInArray(key, tempControls, sizeof(tempControls)));
+				if (key != 27) {
+					tempControls[current] = key;
+				}
+
+				textColor(15);
+				GotoXY(posArray[current].X + 2, posArray[current].Y + 1);
+				printSpecial(tempControls[current]);
+
+				textColor(11);
+				drawSquareBox(posArray[current]);
+			}
+		}
+		else if (key == currentControls[ESCAPE] || key == 27) {
+			if (current == QUIT) {
+				COORD consoleSize = { 100, 30 };
+				ConsoleBuffer tempBuffer = saveConsoleBuffer(consoleSize);
+
+				int selection = quitOptions();
+				if (selection == 2) {
+					restoreConsoleBuffer(tempBuffer);
+					freeConsoleBuffer(&tempBuffer);
+				}
+				else {
+					freeConsoleBuffer(&tempBuffer);
+					if (selection == 0) {
+						memcpy(currentControls, tempControls, sizeof(tempControls));
+					}
+					break;
+				}
+			}
+			else {
+				current = QUIT;
+			}
+		}
+		else if (key == currentControls[UP]) {
+			if (current == DOWN || current == LEFT || current == RIGHT) {
+				current = UP;
+			}
+			else if (current == RESET) {
+				current = RIGHT;
+			}
+			else if (current == QUIT) {
+				current = FLAG;
+			}
+		}
+		else if (key == currentControls[DOWN]) {
+			if (current == UP) {
+				current = DOWN;
+			}
+			else if (current == DOWN || current == LEFT || current == RIGHT) {
+				current = RESET;
+			}
+			else if (current == FLAG || current == ENTER || current == ESCAPE) {
+				current = QUIT;
+			}
+		}
+		else if (key == currentControls[LEFT]) {
+			if (current == FLAG || current == ENTER ||
+				current == ESCAPE || current == QUIT) {
+				current--;
+			}
+			else if (current == UP || current == DOWN) {
+				current = LEFT;
+			}
+			else if (current == RIGHT) {
+				current = DOWN;
+			}
+		}
+		else if (key == currentControls[RIGHT]) {
+			if (current == RIGHT || current == FLAG ||
+				current == ENTER || current == RESET) {
+				current++;
+			}
+			else if (current == UP || current == DOWN) {
+				current = RIGHT;
+			}
+			else if (current == LEFT) {
+				current = DOWN;
+			}
+		}
+
+		if (current != temp) {
+			textColor(11);
+			if (current < 7) {
+				drawSquareBox(posArray[current]);
+			}
+			else {
+				GotoXY(posArray[current].X, posArray[current].Y);
+				printf("%s", current == RESET ? "RESET" : "QUIT");
+			}
+
+			textColor(15);
+			if (temp < 7) {
+				drawSquareBox(posArray[temp]);
+			}
+			else {
+				GotoXY(posArray[temp].X, posArray[temp].Y);
+				printf("%s", temp == RESET ? "RESET" : "QUIT");
+			}
+			GotoXY(0, 0);
+		}
+	}
+}
+
+typedef enum MenuSelection {
+	PLAY,
+	OPTIONS,
+	EXIT
+} MenuSelection;
+
+void mainMenu() {
+	COORD consoleSize = { 100, 30 };
+
+	CursorView(FALSE);
+	SetConsoleWindow(consoleSize.X, consoleSize.Y);
 	system("cls");
 	drawTitle();
 
-	int difficulty = EASY;
-
-	GotoXY(45, 14);
-	printf("Difficulty");
-	GotoXY(43, 18);
-	printf("Easy(9 x 9, 10)");
-	GotoXY(41, 20);
-	printf("Normal(16 x 16, 40)");
-	GotoXY(42, 22);
-	printf("Hard(30 x 16, 99)");
-	GotoXY(47, 24);
-	printf("Custom");
-	GotoXY(40, 18);
-	printf("☞");
+	MenuSelection currentSelection = PLAY;
 
 	while (1) {
-		int key = _getch();
-		if (isupper(key)) key = tolower(key);
-		if (key == 224) key = _getch();
+		textColor(15);
+		GotoXY(45, 20);
+		printf("Play Game");
 
-		if (key == '\n' || key == ' ' || key == 13) {
-			if (difficulty == CUSTOM) {
-				return customDifficulty();
+		GotoXY(46, 22);
+		printf("Options");
+
+		GotoXY(45, 24);
+		printf("Exit Game");
+
+		GotoXY(0, 15);
+		for (int i = 0; i < 100; i++) {
+			_putch(' ');
+		}
+
+		switch (currentSelection) {
+		case PLAY:
+			textColor(8);
+			GotoXY(37, 15);
+			printf("select level & start game");
+			textColor(11);
+			GotoXY(45, 20);
+			printf("Play Game");
+			break;
+
+		case OPTIONS:
+			textColor(8);
+			GotoXY(40, 15);
+			printf("change key settings");
+			textColor(11);
+			GotoXY(46, 22);
+			printf("Options");
+			break;
+
+		case EXIT:
+			textColor(8);
+			GotoXY(42, 15);
+			printf("exit to desktop");
+			textColor(11);
+			GotoXY(45, 24);
+			printf("Exit Game");
+			break;
+		}
+
+		int key = getcontrols();
+
+		if (key == currentControls[ENTER]) {
+			if (currentSelection == PLAY) {
+
+			}
+			else if (currentSelection == OPTIONS) {
+				ConsoleBuffer tempBuffer = saveConsoleBuffer(consoleSize);
+				optionsMenu();
+				restoreConsoleBuffer(tempBuffer);
+				freeConsoleBuffer(&tempBuffer);
+			}
+			else if (currentSelection == EXIT) {
+				break;
+			}
+		}
+		else if (key == currentControls[ESCAPE] || key == 27) {
+			if (currentSelection == EXIT) {
+				break;
 			}
 			else {
-				return difficultyList[difficulty];
+				currentSelection = EXIT;
 			}
 		}
-		else if (key == 'w' || key == 72) {
-			GotoXY(difficulty_cursor_X[difficulty], 18 + difficulty * 2);
-			printf("  ");
-			if (--difficulty < 0) difficulty += 4;
-			GotoXY(difficulty_cursor_X[difficulty], 18 + difficulty * 2);
-			printf("☞");
+		else if (key == currentControls[UP]) {
+			currentSelection = (currentSelection + 2) % 3;
 		}
-		else if (key == 's' || key == 80) {
-			GotoXY(difficulty_cursor_X[difficulty], 18 + difficulty * 2);
-			printf("  ");
-			if (++difficulty > 3) difficulty -= 4;
-			GotoXY(difficulty_cursor_X[difficulty], 18 + difficulty * 2);
-			printf("☞");
-		}
-	}
-}
-
-enum State {
-	CLOSED,
-	FLAGED,
-	OPENED
-};
-
-typedef struct Cell {
-	BOOL isMine;
-	enum State state;
-	int mineCount;
-}Cell;
-
-void setBoard(int numMine, Cell** board, COORD boardSize) {
-	srand((unsigned int)time(NULL));
-	int pos;
-	int max = boardSize.X * boardSize.Y;
-	for (int i = 0; i < numMine; i++) {
-		do {
-			pos = rand() % max;
-		} while (board[pos / boardSize.X][pos % boardSize.X].isMine);
-		board[pos / boardSize.Y][pos % boardSize.Y].isMine = TRUE;
-	}
-
-	for (int i = 0; i < boardSize.X; i++) {
-		for (int j = 0; j < boardSize.Y; j++) {
-			if (board[i][j].isMine == FALSE) {
-				int count = 0;
-				for (int k = -1; k <= 1; k++) {
-					for (int l = -1; l <= 1; l++) {
-						if (i + k >= 0 && i + k < boardSize.X &&
-							j + l >= 0 && j + l < boardSize.Y &&
-							board[i + k][j + l].isMine) {
-							++count;
-						}
-					}
-				}
-				board[i][j].mineCount = count;
-			}
-		}
-	}
-}
-
-int openGrid(Cell** board, COORD openPos, COORD boardSize) {
-	if (board[openPos.X][openPos.Y].isMine) {
-		return 0;
-	}
-	else if (board[openPos.X][openPos.Y].state == CLOSED) {
-		board[openPos.X][openPos.Y].state = OPENED;
-		if (board[openPos.X][openPos.Y].mineCount == 0) {
-			for (int i = -1; i <= 1; i++) {
-				for (int j = -1; j <= 1; j++) {
-					if (openPos.X + i >= 0 && openPos.X + i < boardSize.X &&
-						openPos.Y + j >= 0 && openPos.Y + j < boardSize.Y) {
-						openGrid(board, (COORD) { openPos.X + i, openPos.Y + j }, boardSize);
-					}
-				}
-			}
-		}
-	}
-
-	return 1;
-}
-
-const char* icon[] = { "  ", "①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧" };
-
-int gameLoop(struct Difficulty difficulty) {
-	system("cls");
-	CursorView(TRUE);
-	SetConsoleWindow(difficulty.boardSize.X * 2 + 20, difficulty.boardSize.Y + 2);
-
-	for (int i = 1; i <= difficulty.boardSize.Y; i++) {
-		GotoXY(0, i);
-		for (int j = 0; j < difficulty.boardSize.X; j++) {
-			printf("■");
-		}
-	}
-
-	int leftOver = difficulty.numberMines;
-
-	GotoXY(difficulty.boardSize.X * 2 + 4, difficulty.boardSize.Y / 2 - 3);
-	printf("leftover: %d", leftOver);
-	GotoXY(difficulty.boardSize.X * 2 + 5, difficulty.boardSize.Y / 2);
-	printf("spase / e");
-	GotoXY(difficulty.boardSize.X * 2 + 3, difficulty.boardSize.Y / 2 + 2);
-	printf("quit : q / esc");
-
-	COORD cursorPos = { 0, 0 };
-	GotoXY(cursorPos.X * 2, cursorPos.Y + 1);
-
-	Cell** board = malloc(sizeof(Cell*) * difficulty.boardSize.X);
-	if (board == NULL) {
-		fprintf(stderr, "메모리 할당 실패\n");
-		exit(EXIT_FAILURE);
-	}
-	for (int i = 0; i < difficulty.boardSize.X; i++) {
-		board[i] = calloc(difficulty.boardSize.Y, sizeof(Cell));
-		if (board[i] == NULL) {
-			fprintf(stderr, "메모리 할당 실패\n");
-			exit(EXIT_FAILURE);
-		}
-	}
-
-	setBoard(difficulty.numberMines, board, difficulty.boardSize);
-
-	while (1) {
-		int count = 0;
-		for (int i = 0; i < difficulty.boardSize.X; i++) {
-			for (int j = 0; j < difficulty.boardSize.Y; j++) {
-				if (board[i][j].state != OPENED) {
-					++count;
-				}
-			}
-		}
-		if (count == difficulty.numberMines) {
-			CursorView(FALSE);
-			GotoXY(difficulty.boardSize.X * 2 + 8, difficulty.boardSize.Y / 2 - 2);
-			printf("Win!");
-			break;
-		}
-
-		int key = _getch();
-		if (isupper(key)) key = islower(key);
-		if (key == 224) key = _getch();
-
-		COORD newPos = cursorPos;
-		if (key == ' ' && board[cursorPos.X][cursorPos.Y].state != FLAGED) {
-			if (board[cursorPos.X][cursorPos.Y].state == CLOSED) {
-				if (openGrid(board, cursorPos, difficulty.boardSize) == 0) {
-					CursorView(FALSE);
-					GotoXY(cursorPos.X * 2, cursorPos.Y + 1);
-					printf("♨");
-					GotoXY(difficulty.boardSize.X * 2 + 8, difficulty.boardSize.Y / 2 - 2);
-					printf("BOOM!");
-					break;
-				}
-				CursorView(FALSE);
-				for (int i = 0; i < difficulty.boardSize.X; i++) {
-					for (int j = 0; j < difficulty.boardSize.Y; j++) {
-						if (board[i][j].state == OPENED) {
-							GotoXY(i * 2, j + 1);
-							printf("%s", icon[board[i][j].mineCount]);
-						}
-					}
-				}
-				CursorView(TRUE);
-			}
-			else if (board[cursorPos.X][cursorPos.Y].state == OPENED) {
-				int flagCount = 0;
-				for (int i = -1; i <= 1; i++) {
-					for (int j = -1; j <= 1; j++) {
-						if (cursorPos.X + i >= 0 && cursorPos.X + i < difficulty.boardSize.X &&
-							cursorPos.Y + j >= 0 && cursorPos.Y + j < difficulty.boardSize.Y &&
-							board[cursorPos.X + i][cursorPos.Y + j].state == FLAGED) {
-							++flagCount;
-						}
-					}
-				}
-				if (flagCount == board[cursorPos.X][cursorPos.Y].mineCount) {
-					int isGameOver = 0;
-					for (int i = -1; i <= 1; i++) {
-						for (int j = -1; j <= 1; j++) {
-							if (cursorPos.X + i >= 0 && cursorPos.X + i < difficulty.boardSize.X &&
-								cursorPos.Y + j >= 0 && cursorPos.Y + j < difficulty.boardSize.Y &&
-								board[cursorPos.X + i][cursorPos.Y + j].state == CLOSED) {
-								if (openGrid(board, (COORD) { cursorPos.X + i, cursorPos.Y + j }, difficulty.boardSize) == 0) {
-									CursorView(FALSE);
-									GotoXY((cursorPos.X + i) * 2, cursorPos.Y + j + 1);
-									printf("♨");
-									GotoXY(difficulty.boardSize.X * 2 + 8, difficulty.boardSize.Y / 2 - 2);
-									printf("BOOM!");
-									isGameOver = 1;
-									break;
-								}
-								CursorView(FALSE);
-								for (int i = 0; i < difficulty.boardSize.X; i++) {
-									for (int j = 0; j < difficulty.boardSize.Y; j++) {
-										if (board[i][j].state == OPENED) {
-											GotoXY(i * 2, j + 1);
-											printf("%s", icon[board[i][j].mineCount]);
-										}
-									}
-								}
-								CursorView(TRUE);
-							}
-						}
-						if (isGameOver) break;
-					}
-					if (isGameOver) break;
-				}
-			}
-		}
-		else if (key == 'e' && board[cursorPos.X][cursorPos.Y].state != OPENED) {
-			CursorView(FALSE);
-			if (board[cursorPos.X][cursorPos.Y].state == CLOSED) {
-				board[cursorPos.X][cursorPos.Y].state = FLAGED;
-				printf("▣");
-				--leftOver;
-			}
-			else if (board[cursorPos.X][cursorPos.Y].state == FLAGED) {
-				board[cursorPos.X][cursorPos.Y].state = CLOSED;
-				printf("■");
-				++leftOver;
-			}
-			GotoXY(difficulty.boardSize.X * 2 + 4, difficulty.boardSize.Y / 2 - 3);
-			printf("leftover: %d ", leftOver);
-			CursorView(TRUE);
-		}
-		else if (key == 'q' || key == 27 || key == 3) {
-			break;
-		}
-		else if (key == 'w' || key == 72) {
-			--newPos.Y;
-		}
-		else if (key == 'a' || key == 75) {
-			--newPos.X;
-		}
-		else if (key == 's' || key == 80) {
-			++newPos.Y;
-		}
-		else if (key == 'd' || key == 77) {
-			++newPos.X;
-		}
-
-		if (newPos.X >= 0 && newPos.X < difficulty.boardSize.X &&
-			newPos.Y >= 0 && newPos.Y < difficulty.boardSize.Y) {
-			cursorPos = newPos;
-		}
-		GotoXY(cursorPos.X * 2, cursorPos.Y + 1);
-	}
-
-	for (int i = 0; i < difficulty.boardSize.X; i++) {
-		free(board[i]);
-	}
-	free(board);
-
-	CursorView(FALSE);
-	GotoXY(difficulty.boardSize.X * 2 + 5, difficulty.boardSize.Y / 2 + 4);
-	printf("try again?");
-	GotoXY(difficulty.boardSize.X * 2 + 7, difficulty.boardSize.Y / 2 + 5);
-	printf("Y / N");
-	while (1) {
-		int key = _getch();
-		if (isupper(key)) key = tolower(key);
-
-		if (key == 'y' || key == ' ' || key == 13) {
-			return 1;
-		}
-		else if (key == 'n' || key == 27 || key == 3 || key == 'q') {
-			return 0;
+		else if (key == currentControls[DOWN]) {
+			currentSelection = (currentSelection + 1) % 3;
 		}
 	}
 }
 
 int main() {
-	while (1) {
-		enum menu select = mainMenu();
+	system("title Minesweeper");
 
-		if (select == START_GAME) {
-			struct Difficulty difficulty = difficultySetting();
-			while (gameLoop(difficulty));
-		}
-		else if (select == END_GAME) {
-			break;
-		}
-	}
+	mainMenu();
 
 	return 0;
 }
