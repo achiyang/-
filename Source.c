@@ -478,18 +478,114 @@ void keySettings() {
 	}
 }
 
+void soundSettings() {
+	GotoXY(0, 9);
+	for (int i = 0; i < 100 * 21; i++) {
+		_putch(' ');
+	}
+
+	getkey();
+}
+
 void optionsMenu() {
 	GotoXY(0, 9);
 	for (int i = 0; i < 100 * 21; i++) {
 		_putch(' ');
 	}
 
-	drawSquareBox((COORD) { 41, 18 }, (COORD) { 8, 3 }, 1, FALSE);
-	drawSquareBox((COORD) { 41, 24 }, (COORD) { 8, 3 }, 1, FALSE);
+	COORD pos[3] = {
+		{ 42, 18 },
+		{ 42, 21 },
+		{ 42, 24 }
+	};
+	COORD boxSize = { 7, 3 };
 
-	getkey();
+	textColor(15);
+	for (int i = 0; i < 3; i++) {
+		drawSquareBox(pos[i], boxSize, 1, FALSE);
+	}
 
-	keySettings();
+	int selection = 0;
+
+	while (1) {
+		textColor(15);
+		GotoXY(pos[0].X + 6, pos[0].Y + 1);
+		printf("Key");
+		GotoXY(pos[1].X + 5, pos[1].Y + 1);
+		printf("Sound");
+		GotoXY(pos[2].X + 5, pos[2].Y + 1);
+		printf("Exits");
+		for (int i = 0; i < 3; i++) {
+			drawSquareBox(pos[i], boxSize, 1, FALSE);
+		}
+
+		GotoXY(0, 14);
+		for (int i = 0; i < 100; i++) {
+			_putch(' ');
+		}
+
+		textColor(11);
+		drawSquareBox(pos[selection], boxSize, 1, FALSE);
+		switch (selection) {
+		case 0:
+			GotoXY(pos[0].X + 6, pos[0].Y + 1);
+			printf("Key");
+			textColor(8);
+			GotoXY(41, 14);
+			printf("edit binding keys");
+			break;
+
+		case 1:
+			GotoXY(pos[1].X + 5, pos[1].Y + 1);
+			printf("Sound");
+			textColor(8);
+			GotoXY(39, 14);
+			printf("change sound settings");
+			break;
+
+		case 2:
+			GotoXY(pos[2].X + 5, pos[2].Y + 1);
+			printf("Exits");
+			textColor(8);
+			GotoXY(43, 14);
+			printf("exit to title");
+			break;
+		}
+
+		int key = getcontrols();
+
+		if (key == currentControls[ENTER]) {
+			if (selection == 2) {
+				break;
+			}
+			else {
+				COORD consoleSize = { 100, 30 };
+				ConsoleBuffer tempBuffer = saveConsoleBuffer(consoleSize);
+				if (selection == 0) {
+					keySettings();
+				}
+				else {
+					soundSettings();
+				}
+				restoreConsoleBuffer(tempBuffer);
+				freeConsoleBuffer(&tempBuffer);
+			}
+		}
+		else if (key == currentControls[ESCAPE] || key == 27) {
+			if (selection == 2) {
+				break;
+			}
+			else {
+				selection = 2;
+			}
+		}
+		else if (key == currentControls[UP]) {
+			selection = (selection + 2) % 3;
+		}
+		else if (key == currentControls[DOWN]) {
+			selection = (selection + 1) % 3;
+		}
+	}
 }
 
 typedef enum MenuSelection {
