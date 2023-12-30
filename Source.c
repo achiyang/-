@@ -137,134 +137,83 @@ void printSpecial(char c) {
 	if (isdigit(c)) {
 		printf("%c%c", -93, -80 + c - '0');
 	}
-	else if (islower(c)) {
-		printf("%c%c", -93, -63 + c - 'a');
-	}
-	else if (c == 80) {
-		printf("%c%c", -95, -23);
-	}
-	else if (c == 72) {
-		printf("%c%c", -95, -24);
-	}
-	else if (c == 75) {
-		printf("%c%c", -95, -25);
-	}
-	else if (c == 77) {
-		printf("%c%c", -95, -26);
-	}
-	else if (c == '!') {
-		printf("£¡");
-	}
-	else if (c == '?') {
-		printf("£¿");
-	}
-	else if (c == ',') {
-		printf("£¬");
-	}
-	else if (c == '.') {
-		printf("£®");
-	}
-	else if (c == ':') {
-		printf("£º");
-	}
-	else if (c == ';') {
-		printf("£»");
-	}
-	else if (c == '\'') {
-		printf("£§");
-	}
-	else if (c == '\"') {
-		printf("£¢");
-	}
-	else if (c == '(') {
-		printf("£¨");
-	}
-	else if (c == ')') {
-		printf("£©");
-	}
-	else if (c == '[') {
-		printf("£Û");
-	}
-	else if (c == ']') {
-		printf("£Ý");
-	}
-	else if (c == '{') {
-		printf("£û");
-	}
-	else if (c == '}') {
-		printf("£ý");
-	}
-	else if (c == '<') {
-		printf("¡´");
-	}
-	else if (c == '>') {
-		printf("¡µ");
-	}
-	else if (c == '+') {
-		printf("£«");
-	}
-	else if (c == '-') {
-		printf("£­");
-	}
-	else if (c == '=') {
-		printf("£½");
-	}
-	else if (c == '$') {
-		printf("£¤");
-	}
-	else if (c == '%') {
-		printf("£¥");
-	}
-	else if (c == '#') {
-		printf("££");
-	}
-	else if (c == '&') {
-		printf("£¦");
-	}
-	else if (c == '*') {
-		printf("£ª");
-	}
-	else if (c == '@') {
-		printf("£À");
-	}
-	else if (c == '^') {
-		printf("£Þ");
-	}
-	else if (c == '|') {
-		printf("£ü");
-	}
-	else if (c >= 1 && c <= 26) {
-		printf("^%c", c + 'A' - 1);
-	}
-	else if (c == 32) {
-		printf("¢§");
-	}
-	else {
-		printf("%c ", c);
-	}
+	else if (islower(c)) printf("%c%c", -93, -63 + c - 'a');
+	else if (c == 80) printf("%c%c", -95, -23);
+	else if (c == 72) printf("%c%c", -95, -24);
+	else if (c == 75) printf("%c%c", -95, -25);
+	else if (c == 77) printf("%c%c", -95, -26);
+	else if (c == '!') printf("£¡");
+	else if (c == '?') printf("£¿");
+	else if (c == ',') printf("£¬");
+	else if (c == '.') printf("£®");
+	else if (c == ':') printf("£º");
+	else if (c == ';') printf("£»");
+	else if (c == '\'') printf("£§");
+	else if (c == '\"') printf("£¢");
+	else if (c == '(') printf("£¨");
+	else if (c == ')') printf("£©");
+	else if (c == '[') printf("£Û");
+	else if (c == ']') printf("£Ý");
+	else if (c == '{') printf("£û");
+	else if (c == '}') printf("£ý");
+	else if (c == '<') printf("¡´");
+	else if (c == '>') printf("¡µ");
+	else if (c == '+') printf("£«");
+	else if (c == '-') printf("£­");
+	else if (c == '=') printf("£½");
+	else if (c == '$') printf("£¤");
+	else if (c == '%') printf("£¥");
+	else if (c == '#') printf("££");
+	else if (c == '&') printf("£¦");
+	else if (c == '*') printf("£ª");
+	else if (c == '@') printf("£À");
+	else if (c == '^') printf("£Þ");
+	else if (c == '|') printf("£ü");
+	else if (c >= 1 && c <= 26) printf("^%c", c + 'A' - 1);
+	else if (c == 32) printf("¢§");
+	else printf("%c ", c);
 }
 
-void drawSquareBox(COORD pos) {
+void drawSquareBox(COORD pos, COORD size, int plusSizeX, BOOL clearContents) {
 	GotoXY(pos.X, pos.Y);
-	printf("¦£¦¡¦¡¦¡¦¤ ");
-	GotoXY(pos.X, pos.Y + 1);
-	printf("¦¢ ");
-	GotoXY(pos.X + 4, pos.Y + 1);
-	printf("¦¢ ");
-	GotoXY(pos.X, pos.Y + 2);
-	printf("¦¦¦¡¦¡¦¡¦¥ ");
+	printf("¦£¦¡");
+	for (int i = 0; i < size.X - 2; i++) {
+		printf("¦¡¦¡");
+	}
+	for (int i = 0; i < plusSizeX; i++) {
+		printf("¦¡");
+	}
+	printf("¦¤ ");
+	for (int i = 1; i <= size.Y - 2; i++) {
+		GotoXY(pos.X, pos.Y + i);
+		printf("¦¢ ");
+		if (clearContents) {
+			for (int j = 0; j < size.X - 2; j++) {
+				printf("  ");
+			}
+			for (int j = 0; j < plusSizeX; j++) {
+				printf(" ");
+			}
+		}
+		GotoXY(pos.X + (size.X - 1) * 2 + plusSizeX, pos.Y + i);
+		printf("¦¢ ");
+	}
+	GotoXY(pos.X, pos.Y + size.Y - 1);
+	printf("¦¦¦¡");
+	for (int i = 0; i < size.X - 2; i++) {
+		printf("¦¡¦¡");
+	}
+	for (int i = 0; i < plusSizeX; i++) {
+		printf("¦¡");
+	}
+	printf("¦¥ ");
 }
 
-int quitOptions() {
+int quitKeySettings() {
 	textColor(15);
-	GotoXY(29, 12);
-	printf("¦£¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¤ ");
-	for (int i = 0; i < 9; i++) {
-		GotoXY(29, 13 + i);
-		printf("¦¢                                       ¦¢ ");
-	}
-	GotoXY(29, 22);
-	printf("¦¦¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¥ ");
+	COORD boxPos = { 29, 12 };
+	COORD boxSize = { 21, 11 };
+	drawSquareBox(boxPos, boxSize, 0, TRUE);
 	GotoXY(42, 15);
 	printf("Quit with saving?");
 
@@ -342,8 +291,7 @@ enum {
 	QUIT = 8
 };
 
-void optionsMenu() {
-	CursorView(FALSE);
+void keySettings() {
 	GotoXY(0, 9);
 	for (int i = 0; i < 100 * 21; i++) {
 		_putch(' ');
@@ -351,6 +299,7 @@ void optionsMenu() {
 
 	char tempControls[7];
 	memcpy(tempControls, currentControls, sizeof(currentControls));
+	COORD squareSize = { 3, 3 };
 
 	COORD posArray[9] = {
 		{ 25, 16 },
@@ -383,20 +332,21 @@ void optionsMenu() {
 	GotoXY(posArray[QUIT].X, posArray[QUIT].Y);
 	printf("QUIT");
 
-	GotoXY((posArray[RESET].X + 5 + posArray[QUIT].X) / 2, posArray[RESET].Y);
-	printf("/");
-
 	for (int i = 0; i < 7; i++) {
 		GotoXY(posArray[i].X + 2, posArray[i].Y + 1);
 		printSpecial(tempControls[i]);
 	}
 
-	textColor(11);
-	drawSquareBox(posArray[UP]);
-	textColor(15);
+	textColor(7);
 	for (int i = 1; i < 7; i++) {
-		drawSquareBox(posArray[i]);
+		drawSquareBox(posArray[i], squareSize, 0, FALSE);
 	}
+
+	GotoXY((posArray[RESET].X + 4 + posArray[QUIT].X) / 2, posArray[RESET].Y);
+	printf("/");
+
+	textColor(11);
+	drawSquareBox(posArray[UP], squareSize, 0, FALSE);
 
 	int current = UP;
 
@@ -404,57 +354,12 @@ void optionsMenu() {
 		int temp = current;
 		int key = getcontrols();
 
-		if (key == currentControls[ENTER]) {
+		if (key == currentControls[ENTER] || key == currentControls[ESCAPE] || key == 27) {
 			if (current == QUIT) {
 				COORD consoleSize = { 100, 30 };
 				ConsoleBuffer tempBuffer = saveConsoleBuffer(consoleSize);
 
-				int selection = quitOptions();
-				if (selection == 2) {
-					restoreConsoleBuffer(tempBuffer);
-					freeConsoleBuffer(&tempBuffer);
-				}
-				else {
-					freeConsoleBuffer(&tempBuffer);
-					if (selection == 0) {
-						memcpy(currentControls, tempControls, sizeof(tempControls));
-					}
-					break;
-				}
-			}
-			else if (current == RESET) {
-				memcpy(tempControls, defaultControls, sizeof(defaultControls));
-				for (int i = 0; i < 7; i++) {
-					GotoXY(posArray[i].X + 2, posArray[i].Y + 1);
-					printSpecial(tempControls[i]);
-				}
-			}
-			else {
-				textColor(4);
-				drawSquareBox(posArray[current]);
-
-				int key;
-				do {
-					key = getkey();
-				} while (key != 27 && key != tempControls[current] && isCharInArray(key, tempControls, sizeof(tempControls)));
-				if (key != 27) {
-					tempControls[current] = key;
-				}
-
-				textColor(15);
-				GotoXY(posArray[current].X + 2, posArray[current].Y + 1);
-				printSpecial(tempControls[current]);
-
-				textColor(11);
-				drawSquareBox(posArray[current]);
-			}
-		}
-		else if (key == currentControls[ESCAPE] || key == 27) {
-			if (current == QUIT) {
-				COORD consoleSize = { 100, 30 };
-				ConsoleBuffer tempBuffer = saveConsoleBuffer(consoleSize);
-
-				int selection = quitOptions();
+				int selection = quitKeySettings();
 				if (selection == 2) {
 					restoreConsoleBuffer(tempBuffer);
 					freeConsoleBuffer(&tempBuffer);
@@ -468,7 +373,38 @@ void optionsMenu() {
 				}
 			}
 			else {
-				current = QUIT;
+				if (key == currentControls[ENTER]) {
+					if (current == RESET) {
+						memcpy(tempControls, defaultControls, sizeof(defaultControls));
+						textColor(15);
+						for (int i = 0; i < 7; i++) {
+							GotoXY(posArray[i].X + 2, posArray[i].Y + 1);
+							printSpecial(tempControls[i]);
+						}
+					}
+					else {
+						textColor(4);
+						drawSquareBox(posArray[current], squareSize, 0, FALSE);
+
+						int key;
+						do {
+							key = getkey();
+						} while (key != 27 && key != tempControls[current] && isCharInArray(key, tempControls, sizeof(tempControls)));
+						if (key != 27) {
+							tempControls[current] = key;
+						}
+
+						textColor(15);
+						GotoXY(posArray[current].X + 2, posArray[current].Y + 1);
+						printSpecial(tempControls[current]);
+
+						textColor(11);
+						drawSquareBox(posArray[current], squareSize, 0, FALSE);
+					}
+				}
+				else {
+					current = QUIT;
+				}
 			}
 		}
 		else if (key == currentControls[UP]) {
@@ -521,7 +457,7 @@ void optionsMenu() {
 		if (current != temp) {
 			textColor(11);
 			if (current < 7) {
-				drawSquareBox(posArray[current]);
+				drawSquareBox(posArray[current], squareSize, 0, FALSE);
 			}
 			else {
 				GotoXY(posArray[current].X, posArray[current].Y);
@@ -530,7 +466,8 @@ void optionsMenu() {
 
 			textColor(15);
 			if (temp < 7) {
-				drawSquareBox(posArray[temp]);
+				textColor(7);
+				drawSquareBox(posArray[temp], squareSize, 0, FALSE);
 			}
 			else {
 				GotoXY(posArray[temp].X, posArray[temp].Y);
@@ -539,6 +476,20 @@ void optionsMenu() {
 			GotoXY(0, 0);
 		}
 	}
+}
+
+void optionsMenu() {
+	GotoXY(0, 9);
+	for (int i = 0; i < 100 * 21; i++) {
+		_putch(' ');
+	}
+
+	drawSquareBox((COORD) { 41, 18 }, (COORD) { 8, 3 }, 1, FALSE);
+	drawSquareBox((COORD) { 41, 24 }, (COORD) { 8, 3 }, 1, FALSE);
+
+	getkey();
+
+	keySettings();
 }
 
 typedef enum MenuSelection {
@@ -559,16 +510,19 @@ void mainMenu() {
 
 	while (1) {
 		textColor(15);
-		GotoXY(45, 20);
+		GotoXY(45, 19);
 		printf("Play Game");
+		drawSquareBox((COORD) { 42, 18 }, (COORD) { 7, 3 }, 1, FALSE);
 
 		GotoXY(46, 22);
 		printf("Options");
+		drawSquareBox((COORD) { 42, 21 }, (COORD) { 7, 3 }, 1, FALSE);
 
-		GotoXY(45, 24);
+		GotoXY(45, 25);
 		printf("Exit Game");
+		drawSquareBox((COORD) { 42, 24 }, (COORD) { 7, 3 }, 1, FALSE);
 
-		GotoXY(0, 15);
+		GotoXY(0, 14);
 		for (int i = 0; i < 100; i++) {
 			_putch(' ');
 		}
@@ -576,29 +530,32 @@ void mainMenu() {
 		switch (currentSelection) {
 		case PLAY:
 			textColor(8);
-			GotoXY(37, 15);
+			GotoXY(37, 14);
 			printf("select level & start game");
 			textColor(11);
-			GotoXY(45, 20);
+			GotoXY(45, 19);
 			printf("Play Game");
+			drawSquareBox((COORD) { 42, 18 }, (COORD) { 7, 3 }, 1, FALSE);
 			break;
 
 		case OPTIONS:
 			textColor(8);
-			GotoXY(40, 15);
-			printf("change key settings");
+			GotoXY(42, 14);
+			printf("change settings");
 			textColor(11);
 			GotoXY(46, 22);
 			printf("Options");
+			drawSquareBox((COORD) { 42, 21 }, (COORD) { 7, 3 }, 1, FALSE);
 			break;
 
 		case EXIT:
 			textColor(8);
-			GotoXY(42, 15);
+			GotoXY(42, 14);
 			printf("exit to desktop");
 			textColor(11);
-			GotoXY(45, 24);
+			GotoXY(45, 25);
 			printf("Exit Game");
+			drawSquareBox((COORD) { 42, 24 }, (COORD) { 7, 3 }, 1, FALSE);
 			break;
 		}
 
