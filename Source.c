@@ -487,7 +487,7 @@ void soundSettings() {
 	getkey();
 }
 
-void optionsMenu() {
+void options() {
 	GotoXY(0, 9);
 	for (int i = 0; i < 100 * 21; i++) {
 		_putch(' ');
@@ -588,15 +588,20 @@ void optionsMenu() {
 	}
 }
 
+void selectLevel() {
+
+}
+
 typedef enum MenuSelection {
 	PLAY,
 	OPTIONS,
 	EXIT
 } MenuSelection;
 
-void mainMenu() {
+int main() {
 	COORD consoleSize = { 100, 30 };
 
+	system("title Minesweeper");
 	CursorView(FALSE);
 	SetConsoleWindow(consoleSize.X, consoleSize.Y);
 	system("cls");
@@ -658,17 +663,19 @@ void mainMenu() {
 		int key = getcontrols();
 
 		if (key == currentControls[ENTER]) {
-			if (currentSelection == PLAY) {
-
+			if (currentSelection == EXIT) {
+				break;
 			}
-			else if (currentSelection == OPTIONS) {
+			else {
 				ConsoleBuffer tempBuffer = saveConsoleBuffer(consoleSize);
-				optionsMenu();
+				if (currentSelection == PLAY) {
+					selectLevel();
+				}
+				else {
+					options();
+				}
 				restoreConsoleBuffer(tempBuffer);
 				freeConsoleBuffer(&tempBuffer);
-			}
-			else if (currentSelection == EXIT) {
-				break;
 			}
 		}
 		else if (key == currentControls[ESCAPE] || key == 27) {
@@ -686,12 +693,6 @@ void mainMenu() {
 			currentSelection = (currentSelection + 1) % 3;
 		}
 	}
-}
-
-int main() {
-	system("title Minesweeper");
-
-	mainMenu();
 
 	return 0;
 }
